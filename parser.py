@@ -57,6 +57,7 @@ class PartialParse(object):
         Assume that the PartialParse is valid
         """
         # *** BEGIN YOUR CODE ***
+        return self.next == len(self.sentence) and len(self.stack) == 1
         # *** END YOUR CODE ***
 
     def parse_step(self, transition_id, deprel=None):
@@ -78,6 +79,23 @@ class PartialParse(object):
                 given the current state
         """
         # *** BEGIN YOUR CODE ***
+        if transition_id == self.left_arc_id:
+            if len(self.stack) < 3:
+                raise ValueError
+            self.arcs.append((self.stack[-1], self.stack[-2], deprel))
+            self.stack.pop(-2)
+        elif transition_id == self.right_arc_id:
+            if len(self.stack) < 2:
+                raise ValueError
+            self.arcs.append((self.stack[-2], self.stack[-1], deprel))
+            self.stack.pop(-1)
+        elif transition_id == self.shift_id:
+            if (self.next >= len(self.sentence)):
+                raise ValueError
+            self.stack.append(self.next)
+            self.next += 1
+        else:
+            raise ValueError
         # *** END YOUR CODE ***
 
     def get_n_leftmost_deps(self, sentence_idx, n=None):
@@ -100,6 +118,16 @@ class PartialParse(object):
                 1, etc.
         """
         # *** BEGIN YOUR CODE ***
+        deps = list()
+        for idx_head, idx_dep, deprel in self.arcs:
+            if idx_head == sentence_idx:
+                deps.append(idx_dep)
+        deps.sort()
+        if n is None:
+            num = n
+        else:
+            num = n if len(deps) > n else len(deps)
+        deps = deps[:num]
         # *** END YOUR CODE ***
         return deps
 
@@ -123,6 +151,16 @@ class PartialParse(object):
                 1, etc.
         """
         # *** BEGIN YOUR CODE ***
+        deps = list()
+        for idx_head, idx_dep, deprel in self.arcs:
+            if idx_head == sentence_idx:
+                deps.append(idx_dep)
+        deps.sort(reverse=True)
+        if n is None:
+            num = n
+        else:
+            num = n if len(deps) > n else len(deps)
+        deps = deps[:num]
         # *** END YOUR CODE ***
         return deps
 
