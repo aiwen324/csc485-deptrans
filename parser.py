@@ -79,6 +79,8 @@ class PartialParse(object):
                 given the current state
         """
         # *** BEGIN YOUR CODE ***
+        print("Get transaction id: {}, deprel is: {}".format(transition_id, deprel))
+        print("Current stack is: {}, next is: {}".format(self.stack, self.next))
         if transition_id == self.left_arc_id:
             if len(self.stack) < 3:
                 raise ValueError
@@ -269,6 +271,28 @@ def minibatch_parse(sentences, model, batch_size):
             arcs[i] should contain the arcs for sentences[i]).
     """
     # *** BEGIN YOUR CODE ***
+    # Generate a list of list
+    arcs = [[] for i in range(len(sentences))]
+    partial_parses = [PartialParse(s) for s in sentences]
+    unfinished_parses = [i for i in range(len(sentences))]
+    while unfinished_parses:
+        batch_parses_idx = unfinished_parses[:batch_size]
+        batch_parses = [partial_parses[i] for i in batch_parses_idx]
+        td_pairs = model.predict(batch_parses)
+        for i, td_pair in enumerate(td_pairs):
+            # Get the real index in partial_parses
+            parse_idx = unfinished_parses[i]
+            # print("Parse Step for parser", parse_idx)
+            partial_parses[parse_idx].parse_step(*td_pair)
+            if partial_parses[parse_idx].complete:
+                # print("Parser complete detected, stack: {}, next: {}".format(partial_parses[parse_idx].stack, partial_parses[parse_idx].next))
+                # print("Remove parse_idx {} from batch_parses_idx".format(parse_idx))
+                # print("batch_parses_idx before remove", batch_parses_idx)
+                arcs[parse_idx] = partial_parses[parse_idx].arcs
+                batch_parses_idx.remove(parse_idx)
+                # print("batch_parses_idx after remove", batch_parses_idx)
+        unfinished_parses = batch_parses_idx + unfinished_parses[batch_size:]
+
     # *** END YOUR CODE ***
     return arcs
 
