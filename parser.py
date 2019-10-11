@@ -250,8 +250,9 @@ class PartialParse(object):
                         parser_copy.arcs = list(self.arcs)
                         try:
                             parser_copy.parse_step(self.left_arc_id, deprel=key)
-                            parser_copy.get_oracle(graph)
-                            return self.left_arc_id, key
+                            o1, o2 = parser_copy.get_oracle(graph)
+                            if o1 != -1:
+                                return self.left_arc_id, key
                         except ValueError:
                             if parser_copy.complete:
                                 # The case that parser_copy successfully finish parsing graph
@@ -272,8 +273,9 @@ class PartialParse(object):
                         parser_copy.arcs = list(self.arcs)
                         try:
                             parser_copy.parse_step(self.right_arc_id, deprel=key)
-                            parser_copy.get_oracle(graph)
-                            return self.right_arc_id, key
+                            o1, o2 = parser_copy.get_oracle(graph)
+                            if o1 != -1:
+                                return self.right_arc_id, key
                         except ValueError:
                             if parser_copy.complete:
                                 # The case that parser_copy successfully finish parsing graph
@@ -287,13 +289,13 @@ class PartialParse(object):
             parser_copy.arcs = list(self.arcs)
             try:
                 parser_copy.parse_step(self.shift_id)
-                parser_copy.get_oracle(graph)
-                return self.shift_id, deprel
+                o1, o2 = parser_copy.get_oracle(graph)
+                if o1 != -1:
+                    return self.shift_id, deprel
             except ValueError:
                 if parser_copy.complete:
                     return self.shift_id, deprel
-        if True:
-            raise ValueError
+        # *** END YOUR CODE *** 
         return transition_id, deprel
 
     def parse(self, td_pairs):
