@@ -73,9 +73,9 @@ class ParserModel(nn.Module):
                 matrix of pre-trained word embeddings
         """
         # *** BEGIN YOUR CODE ***
-        self.word_embeddings = word_embeddings
-        self.tag_embeddings = he_initializer((Config.n_tag_ids, Config.embed_size))
-        self.deprel_embeddings = he_initializer((Config.n_deprel_ids, Config.embed_size))
+        self.word_embeddings = torch.tensor(word_embeddings, requires_grad=True)
+        self.tag_embeddings = he_initializer((self.config.n_tag_ids, self.config.embed_size))
+        self.deprel_embeddings = he_initializer((self.config.n_deprel_ids, self.config.embed_size))
         # *** END YOUR CODE ***
 
     def create_weights_biases(self):
@@ -112,11 +112,11 @@ class ParserModel(nn.Module):
            and bias tensors (see the PyTorch tutorials for more details).
         """
         # *** BEGIN YOUR CODE ***
-        self.W_h = he_initializer(((Config.n_word_features+Config.n_tag_features+Config.n_deprel_features)*Config.embed_size,
-                                     Config.hidden_size))
-        self.b_h = torch.zeros((Config.hidden_size,), requires_grad=True)
-        self.W_o = he_initializer((Config.hidden_size, Config.n_classes))
-        self.b_o = torch.zeros((Config.n_classes,), requires_grad=True)
+        self.W_h = he_initializer(((self.config.n_word_features+self.config.n_tag_features+self.config.n_deprel_features)*self.config.embed_size,
+                                     self.config.hidden_size))
+        self.b_h = torch.zeros((self.config.hidden_size,), requires_grad=True)
+        self.W_o = he_initializer((self.config.hidden_size, self.config.n_classes))
+        self.b_o = torch.zeros((self.config.n_classes,), requires_grad=True)
         # *** END YOUR CODE ***
 
     def embedding_lookup(self, id_batch, n_ids, embedding_matrix):
@@ -155,7 +155,7 @@ class ParserModel(nn.Module):
         # *** BEGIN YOUR CODE ***
         id_batch_one_hot = one_hot_float(id_batch, n_ids)
         embedded_batch = torch.matmul(id_batch_one_hot, embedding_matrix)
-        embedded_batch.reshape(embedded_batch.shape[0], -1)
+        embedded_batch = embedded_batch.reshape(embedded_batch.shape[0], -1)
         # *** END YOUR CODE ***
         return embedded_batch
 
@@ -186,9 +186,9 @@ class ParserModel(nn.Module):
            using torch.cat and return the result.
         """
         # *** BEGIN YOUR CODE ***
-        embedded_word_id_batch = self.embedding_lookup(word_id_batch, Config.n_word_ids, self.word_embeddings)
-        embedded_tag_id_batch = self.embedding_lookup(tag_id_batch, Config.n_tag_ids, self.tag_embeddings)
-        embedded_deprel_id_batch = self.embedding_lookup(deprel_id_batch, Config.n_deprel_ids, self.deprel_embeddings)
+        embedded_word_id_batch = self.embedding_lookup(word_id_batch, self.config.n_word_ids, self.word_embeddings)
+        embedded_tag_id_batch = self.embedding_lookup(tag_id_batch, self.config.n_tag_ids, self.tag_embeddings)
+        embedded_deprel_id_batch = self.embedding_lookup(deprel_id_batch, self.config.n_deprel_ids, self.deprel_embeddings)
         x = torch.cat((embedded_word_id_batch, embedded_tag_id_batch, embedded_deprel_id_batch), dim=1)
         # *** END YOUR CODE ***
         return x
@@ -237,7 +237,7 @@ class ParserModel(nn.Module):
         # *** BEGIN YOUR CODE ***
         # x.shape is (B, N*embed_size)
         h = F.relu(torch.matmul(x, self.W_h) + self.b_h)
-        h_drop = F.dropout(h, p=Config.dropout, training=self.training)
+        h_drop = F.dropout(h, p=self.config.dropout, training=self.training)
         pred = torch.matmul(h_drop, self.W_o) + self.b_o
         # *** END YOUR CODE ***
         return pred
@@ -280,7 +280,7 @@ class ParserModel(nn.Module):
           change the attribute name!
         """
         # *** BEGIN YOUR CODE ***
-        optimizer = torch.optim.Adam([self.tag_embeddings, self.deprel_embeddings, self.W_h, self.b_h, self.W_o, self.b_o], lr=Config.lr)
+        self.optimizer = torch.optim.Adam([self.tag_embeddings, self.deprel_embeddings, self.W_h, self.b_h, self.W_o, self.b_o], lr=self.config.lr)
         # *** END YOUR CODE ***
 
     def _fit_batch(self, word_id_batch, tag_id_batch, deprel_id_batch,
@@ -380,6 +380,7 @@ def main(debug):
         config.n_deprel_features = deprel_batch.shape[-1]
         config.n_classes = td_batch.shape[-1]
         break
+    # print("Get here")
     print('# word features: {}'.format(config.n_word_features))
     print('# tag features: {}'.format(config.n_tag_features))
     print('# deprel features: {}'.format(config.n_deprel_features))
@@ -441,4 +442,4 @@ def main(debug):
 
 
 if __name__ == '__main__':
-    main(False)
+    main(True)
