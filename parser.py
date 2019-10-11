@@ -93,7 +93,7 @@ class PartialParse(object):
             self.stack.pop(-1)
         elif transition_id == self.shift_id:
             if (self.next >= len(self.sentence)):
-                raise ValueError
+                raise ValueError("Detect next {} is greater or equal to length of sentence {}".format(self.next, len(self.sentence)))
             self.stack.append(self.next)
             self.next += 1
         else:
@@ -303,15 +303,19 @@ def minibatch_parse(sentences, model, batch_size):
             # Get the real index in partial_parses
             parse_idx = unfinished_parses[i]
             # print("Parse Step for parser", parse_idx)
-            partial_parses[parse_idx].parse_step(*td_pair)
-            if partial_parses[parse_idx].complete:
-                # print("Parser complete detected, stack: {}, next: {}".format(partial_parses[parse_idx].stack, partial_parses[parse_idx].next))
-                # print("Remove parse_idx {} from batch_parses_idx".format(parse_idx))
-                # print("batch_parses_idx before remove", batch_parses_idx)
-                arcs[parse_idx] = partial_parses[parse_idx].arcs
+            # print("td_pair is", td_pair)
+            try:
+                partial_parses[parse_idx].parse_step(*td_pair)
+                if partial_parses[parse_idx].complete:
+                    # print("Parser complete detected, stack: {}, next: {}".format(partial_parses[parse_idx].stack, partial_parses[parse_idx].next))
+                    # print("Remove parse_idx {} from batch_parses_idx".format(parse_idx))
+                    # print("batch_parses_idx before remove", batch_parses_idx)
+                    arcs[parse_idx] = partial_parses[parse_idx].arcs
+                    batch_parses_idx.remove(parse_idx)
+                    # print("Detect partial_parses {} complete".format(parse_idx))
+                    # print("batch_parses_idx after remove", batch_parses_idx)
+            except ValueError:
                 batch_parses_idx.remove(parse_idx)
-                # print("Detect partial_parses {} complete".format(parse_idx))
-                # print("batch_parses_idx after remove", batch_parses_idx)
         unfinished_parses = batch_parses_idx + unfinished_parses[batch_size:]
         # print("unfinished_parses after pop: ", unfinished_parses)
 

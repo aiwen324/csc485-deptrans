@@ -280,7 +280,7 @@ class ParserModel(nn.Module):
           change the attribute name!
         """
         # *** BEGIN YOUR CODE ***
-        self.optimizer = torch.optim.Adam([self.tag_embeddings, self.deprel_embeddings, self.W_h, self.b_h, self.W_o, self.b_o], lr=self.config.lr)
+        self.optimizer = torch.optim.Adam([self.word_embeddings, self.tag_embeddings, self.deprel_embeddings, self.W_h, self.b_h, self.W_o, self.b_o], lr=self.config.lr)
         # *** END YOUR CODE ***
 
     def _fit_batch(self, word_id_batch, tag_id_batch, deprel_id_batch,
@@ -442,4 +442,4 @@ def main(debug):
 
 
 if __name__ == '__main__':
-    main(True)
+    main(False)
