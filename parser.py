@@ -220,81 +220,25 @@ class PartialParse(object):
             raise ValueError('PartialParse already completed')
         transition_id, deprel = -1, None
         # *** BEGIN YOUR CODE ***
-        # This is basically a tree search algorithm
-        # We have 3 options starting from the current position
-        # 1. Left - Arc
-        # 2. Right - Arc
-        # 3. Shift
-        # What we should do is to check the validation of each branch
-        # by checking the status of stack, next, and graph.
-        # After this, we could just get a recursion.
-        # Reason we choose this is in the description and the parsing
-        # process from question 1 it favors Left-Arc > Right-Arc > Shift
-        # ==========================================
-        # Left-Arc Validation
-        # print("self.stack is: ", self.stack)
-        # print("self.next is: ", self.next)
-        # print("self.arcs is: ", self.arcs)
-        if len(self.stack) >= 3:
-            stack_top, stack_second_top = self.stack[-1], self.stack[-2]
-            left_dps = get_left_deps(graph.nodes[stack_top])
-            if stack_second_top in left_dps:
-                # This is the case we might want to apply the left-arc
-                # We might want to make a snapshot of the current parser status
-                deps_dict = graph.nodes[stack_top]['deps']
-                for key in deps_dict:
-                    if stack_second_top in deps_dict[key]:
-                        parser_copy = PartialParse(self.sentence[1:])
-                        parser_copy.stack = list(self.stack)
-                        parser_copy.next = self.next
-                        parser_copy.arcs = list(self.arcs)
-                        try:
-                            parser_copy.parse_step(self.left_arc_id, deprel=key)
-                            o1, o2 = parser_copy.get_oracle(graph)
-                            if o1 != -1:
-                                return self.left_arc_id, key
-                        except ValueError:
-                            if parser_copy.complete:
-                                # The case that parser_copy successfully finish parsing graph
-                                return self.left_arc_id, key
-        # ==========================================
-        # Right-Arc Validation
-        if len(self.stack) >= 2:
-            stack_top, stack_second_top = self.stack[-1], self.stack[-2]
-            right_deps = get_right_deps(graph.nodes[stack_second_top])
-            if stack_top in right_deps:
-                # This is the case we might want to apply right-arc
-                deps_dict = graph.nodes[stack_second_top]['deps']
-                for key in deps_dict:
-                    if stack_top in deps_dict[key]:
-                        parser_copy = PartialParse(self.sentence[1:])
-                        parser_copy.stack = list(self.stack)
-                        parser_copy.next = self.next
-                        parser_copy.arcs = list(self.arcs)
-                        try:
-                            parser_copy.parse_step(self.right_arc_id, deprel=key)
-                            o1, o2 = parser_copy.get_oracle(graph)
-                            if o1 != -1:
-                                return self.right_arc_id, key
-                        except ValueError:
-                            if parser_copy.complete:
-                                # The case that parser_copy successfully finish parsing graph
-                                return self.right_arc_id, key
-        # ==========================================
-        # Shift Validation
+        if len(self.stack) < 2:
+            return self.shift_id, None
+        
+        # Left-Arc case:
+        if graph.nodes[self.stack[-2]]['head'] == self.stack[-1]:
+            for key in graph.nodes[self.stack[-1]]['deps']:
+                if self.stack[-2] in graph.nodes[self.stack[-1]]['deps'][key]:
+                    return self.left_arc_id, key
+        if graph.nodes[self.stack[-1]]['head'] == self.stack[-2]:
+            deps = get_deps(graph.nodes[self.stack[-1]])
+            deps = [dep for dep in deps]
+            if len(deps) == 0 or max(deps) < self.next:
+                for key in graph.nodes[self.stack[-2]]['deps']:
+                    if self.stack[-1] in graph.nodes[self.stack[-2]]['deps'][key]:
+                        return self.right_arc_id, key
         if self.next < len(self.sentence):
-            parser_copy = PartialParse(self.sentence[1:])
-            parser_copy.stack = list(self.stack)
-            parser_copy.next = self.next
-            parser_copy.arcs = list(self.arcs)
-            try:
-                parser_copy.parse_step(self.shift_id)
-                o1, o2 = parser_copy.get_oracle(graph)
-                if o1 != -1:
-                    return self.shift_id, deprel
-            except ValueError:
-                if parser_copy.complete:
-                    return self.shift_id, deprel
+            return self.shift_id, None
+        else:
+            raise ValueError
         # *** END YOUR CODE *** 
         return transition_id, deprel
 
@@ -351,6 +295,7 @@ def minibatch_parse(sentences, model, batch_size):
     partial_parses = [PartialParse(s) for s in sentences]
     unfinished_parses = [i for i in range(len(sentences))]
     while unfinished_parses:
+        # print("unfinished_parses are", unfinished_parses)
         batch_parses_idx = unfinished_parses[:batch_size]
         batch_parses = [partial_parses[i] for i in batch_parses_idx]
         td_pairs = model.predict(batch_parses)
@@ -365,8 +310,10 @@ def minibatch_parse(sentences, model, batch_size):
                 # print("batch_parses_idx before remove", batch_parses_idx)
                 arcs[parse_idx] = partial_parses[parse_idx].arcs
                 batch_parses_idx.remove(parse_idx)
+                # print("Detect partial_parses {} complete".format(parse_idx))
                 # print("batch_parses_idx after remove", batch_parses_idx)
         unfinished_parses = batch_parses_idx + unfinished_parses[batch_size:]
+        # print("unfinished_parses after pop: ", unfinished_parses)
 
     # *** END YOUR CODE ***
     return arcs
@@ -565,6 +512,11 @@ def test_minibatch_parse():
                   ('arcs', 'l'),
                   ('only', 'm'),
                   ('again', 'n')],
+                 [('left', 'k'),
+                  ('arcs', 'l'),
+                  ('only', 'm'),
+                  ('again', 'n'),
+                  ('agina', 'z')]
                  ]
     arcs = minibatch_parse(sentences, DummyModel(), 2)
     # bludgeon the arcs into PartialParse to remain compatible with _test_arcs
