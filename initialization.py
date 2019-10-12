@@ -2,7 +2,6 @@
 """Initialization functions"""
 
 import torch
-import math
 
 
 def he_initializer(shape, **kwargs):
@@ -29,7 +28,7 @@ def he_initializer(shape, **kwargs):
     if len(shape) < 1:
         raise ValueError
     num_input_units = shape[0]
-    sigma = math.sqrt(2.0 / num_input_units)
+    sigma = (2.0 / num_input_units)**0.5
     out = torch.normal(mean=0, std=sigma, size=shape, requires_grad=True)
     # *** END YOUR CODE ***
     return out
